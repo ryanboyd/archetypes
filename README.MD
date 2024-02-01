@@ -15,14 +15,14 @@ I have provided an example notebook in this repo that walks through the basic pr
 
 This method is originally described in the following forthcoming paper:
 ```
-@inproceedings{varadarajan_archetypes_nodate,
+@inproceedings{varadarajan_archetypes_2024,
 	address = {St. Julians, Malta},
 	title = {Archetypes and {Entropy}: {Theory}-{Driven} {Extraction} of {Evidence} for {Suicide} {Risk}},
 	booktitle = {Proceedings of the {Tenth} {Workshop} on {Computational} {Linguistics} and {Clinical} {Psychology}},
 	publisher = {Association for Computational Linguistics},
 	author = {Varadarajan, Vasudha and Lahnala, Allison and Ganesan, Adithya V. and Dey, Gourab and Mangalik, Siddharth and Bucur, Ana-Maria and Soni, Nikita and Rao, Rajath and Lanning, Kevin and Vallejo, Isabella and Flek, Lucie and Schwartz, H. Andrew and Welch, Charles and Boyd, Ryan L.},
+	year = {2024},
 }
-
 ```
 
 The citation above will be updated once the paper is actually published 😊
