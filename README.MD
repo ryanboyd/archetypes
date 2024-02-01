@@ -14,7 +14,7 @@ I have provided an example notebook in this repo that walks through the basic pr
 # Citation
 
 This method is originally described in the following forthcoming paper:
-
+```
 @inproceedings{varadarajan_archetypes,
 	address = {St. Julians, Malta},
 	title = {Archetypes and {Entropy}: {Theory}-{Driven} {Extraction} of {Evidence} for {Suicide} {Risk}},
@@ -22,5 +22,6 @@ This method is originally described in the following forthcoming paper:
 	publisher = {Association for Computational Linguistics},
 	author = {Varadarajan, Vasudha and Lahnala, Allison and Ganesan, Adithya V. and Dey, Gourab and Mangalik, Siddharth and Bucur, Ana-Maria and Soni, Nikita and Rao, Rajath and Lanning, Kevin and Vallejo, Isabella and Flekova, Lucie and Schwartz, H. Andrew and Boyd, Ryan L.},
 }
+```
 
 The citation above will be updated once the paper is actually published 😊
