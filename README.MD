@@ -14,6 +14,11 @@ If you want to run the library "out of the box" you will need to first install t
 - `sentence_transformers`
 - `nltk`
 
+You can try to install these all in one go by running the following command from your terminal/cmd:
+`pip install numpy tqdm torch sentence_transformers nltk`
+
+Future updates to this repo may (or may not!) include an actual requirements.txt file and other .whl building tidbits, but for now, the above minimal setup should make life pretty easy.
+
 # Examples
 
 I have provided an example notebook in this repo that walks through the basic process of using this library, along with demonstrations of a few important "helper" functions to help you evaluate the statistical/psychometric qualities of your archetypes.
