@@ -15,6 +15,7 @@ If you want to run the library "out of the box" you will need to first install t
 - `nltk`
 
 You can try to install these all in one go by running the following command from your terminal/cmd:
+
 `pip install numpy tqdm torch sentence_transformers nltk`
 
 Future updates to this repo may (or may not!) include an actual requirements.txt file and other .whl building tidbits, but for now, the above minimal setup should make life pretty easy.
