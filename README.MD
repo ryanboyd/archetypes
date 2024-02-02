@@ -6,6 +6,14 @@ The core idea behind *Archetypes* is that you pre-define a set of prototypical s
 
 *Note*: For the curious: no, this approach not inspired by anything [Jungian](https://en.wikipedia.org/wiki/Jungian_archetypes) in nature. In the past, I've [said a few things](https://www.tandfonline.com/doi/full/10.1080/1047840X.2019.1633122?casa_token=cnHLr5uwiXUAAAAA:ACUCFK4tC9HXBBMlfhIFjfPxWLuCEK7owT3z_IBv2rZUa35fq4Z_rVkETqGO0wa1FqYjbmgxcRWxnw) about Jungian archetypes that have inspired scholars to write more than a few frustrated e-mails to me. Apologies to the Jungians.
 
+# Requirements
+If you want to run the library "out of the box" you will need to first install the following packages:
+- `numpy`
+- `tqdm`
+- `torch`
+- `sentence_transformers`
+- `nltk`
+
 # Examples
 
 I have provided an example notebook in this repo that walks through the basic process of using this library, along with demonstrations of a few important "helper" functions to help you evaluate the statistical/psychometric qualities of your archetypes.
