@@ -6,8 +6,14 @@ The core idea behind *Archetypes* is that you pre-define a set of prototypical s
 
 *Note*: For the curious: no, this approach not inspired by anything [Jungian](https://en.wikipedia.org/wiki/Jungian_archetypes) in nature. In the past, I've [said a few things](https://www.tandfonline.com/doi/full/10.1080/1047840X.2019.1633122?casa_token=cnHLr5uwiXUAAAAA:ACUCFK4tC9HXBBMlfhIFjfPxWLuCEK7owT3z_IBv2rZUa35fq4Z_rVkETqGO0wa1FqYjbmgxcRWxnw) about Jungian archetypes that have inspired scholars to write more than a few frustrated e-mails to me. Apologies to the Jungians.
 
+# Installation
+
+This package is easily installable via pip via the following command:
+`pip install archetyper`
+
+
 # Requirements
-If you want to run the library "out of the box" you will need to first install the following packages:
+If you want to run the library without `pip` installing as shown above, you will need to first install the following packages:
 - `numpy`
 - `tqdm`
 - `torch`
@@ -18,7 +24,7 @@ You can try to install these all in one go by running the following command from
 
 `pip install numpy tqdm torch sentence_transformers nltk`
 
-Future updates to this repo may (or may not!) include an actual requirements.txt file and other .whl building tidbits, but for now, the above minimal setup should make life pretty easy.
+
 
 # Examples
 

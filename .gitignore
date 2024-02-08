@@ -166,3 +166,6 @@ archetypes_sent.csv
 
 # ignore my bat script for launching jupyter
 launch_jupyter.bat
+
+# ignore all other batch scripts
+*.bat

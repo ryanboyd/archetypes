@@ -1,0 +1,41 @@
+[build-system]
+
+requires = ["setuptools>=61.0"]
+
+build-backend = "setuptools.build_meta"
+
+
+[project]
+
+name = "archetyper"
+
+version = "1.0.0"
+
+authors = [
+  { name="Ryan L. Boyd", email="ryan@ryanboyd.io" },
+  { name="Vasudha Varadarajan", email="vvaradarajan@cs.stonybrook.edu" },
+]
+
+description = "Create and quantify 'archetypes' of your constructs. A dictionary-like method run amok!"
+
+readme = "README.MD"
+
+requires-python = ">=3.8"
+
+dependencies=["numpy>=1.25.2",
+			  "tqdm>=4.66.1",
+			  "torch>=2.0.1",
+			  "sentence_transformers>=2.2.2",
+			  "nltk>=3.8.1"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+
+Homepage = "https://github.com/ryanboyd/archetypes"
+
+Issues = "https://github.com/ryanboyd/archetypes/issues"
