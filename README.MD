@@ -9,6 +9,7 @@ The core idea behind *Archetypes* is that you pre-define a set of prototypical s
 # Installation
 
 This package is easily installable via pip via the following command:
+
 `pip install archetyper`
 
 
