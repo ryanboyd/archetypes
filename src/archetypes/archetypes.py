@@ -3,6 +3,7 @@ import csv
 import os.path
 import numpy as np
 from tqdm import tqdm
+from statistics import variance
 from torch import mean as torchmean
 from sentence_transformers import SentenceTransformer, util
 from nltk import sent_tokenize
@@ -32,6 +33,25 @@ def mean_center(input_vector: list) -> list:
     centered_list = [x - list_mean for x in input_vector]
 
     return centered_list
+
+def cronbach(input_vectors: list) -> float:
+
+    k = len(input_vectors)
+
+    if k < 2:
+        return None
+
+    item_variances = []
+
+    for i in range(0, k):
+        item_variances.append(variance(input_vectors[i]))
+
+    total_variance = variance(np.sum(input_vectors, 0))
+
+    cronbach_alpha = (k / (k - 1)) * ((total_variance - sum(item_variances)) / total_variance)
+
+    return cronbach_alpha
+
 
 # define a class to hold our archetypes for each construct.
 class ArchetypeCollection():
@@ -151,16 +171,23 @@ class ArchetypeQuantifier():
 
             mean_cos_sim = 0.0
 
+            sentence_vectors = []
+
             for i in range(len(self.archetypes.archetype_sentences[archetype_name])):
                 archetype_test_sent = [self.archetypes.archetype_sentences[archetype_name][i]]
                 archetype_rest_sents = [x for x in self.archetypes.archetype_sentences[archetype_name] if
                                         x != archetype_test_sent]
 
+                # calculate the embedding for the 'test' sentence
                 archetype_test_embedding = torchmean(self.model.encode(
                     archetype_test_sent,
                     convert_to_tensor=True),
                     axis=0).tolist()
 
+                # we save these vectors for later so that we can calculate cronbach's alpha
+                sentence_vectors.append(archetype_test_embedding)
+
+                # calculate the average embedding for all of the 'rest' sentences
                 archetype_rest_embedding = torchmean(self.model.encode(
                     archetype_rest_sents,
                     convert_to_tensor=True),
@@ -179,7 +206,15 @@ class ArchetypeQuantifier():
                 print(f"\t{round(cos_sim, 5)}: {archetype_test_sent[0]}")
 
             print("\t--------------------")
-            print(f"\t{round(mean_cos_sim, 5)}: Average item-rest cos_sim\n\n")
+            print(f"\t{round(mean_cos_sim, 5)}: Average item-rest cos_sim")
+
+            cronbachs_alpha = cronbach(sentence_vectors)
+            if cronbachs_alpha is None:
+                print(f"\tCannot calculate Cronbach's alpha where the number of sentences < 2")
+            else:
+                print(f"\t{round(cronbach(sentence_vectors), 5)}: Cronbach's alpha\n\n")
+
+
 
         return
 
