@@ -126,7 +126,10 @@ class ArchetypeResult():
 # this is the main machine that will do the actual scoring of the texts
 class ArchetypeQuantifier():
 
-    def __init__(self, archetypes: ArchetypeCollection, model: str, mean_center_vectors: bool = True) -> None:
+    def __init__(self,
+                 archetypes: ArchetypeCollection,
+                 model: str,
+                 mean_center_vectors: bool = True) -> None:
         """
         Initialize an instance of the ArchetypeQuantifier class
         :param archetypes: An instance of the Archetype_Collection class
@@ -146,9 +149,9 @@ class ArchetypeQuantifier():
         order_count = 0
         for archetype_construct in self.archetypes.archetype_names:
             self.archetype_embeddings[archetype_construct] = torchmean(input=self.model.encode(
-                                                                        sentences=self.archetypes.archetype_sentences[archetype_construct],
-                                                                        convert_to_tensor=True),
-                                                                        axis=0).tolist()
+                                                                       sentences=self.archetypes.archetype_sentences[archetype_construct],
+                                                                       convert_to_tensor=True),
+                                                                       axis=0).tolist()
 
             if self.centered_vec:
                 self.archetype_embeddings[archetype_construct] = mean_center(self.archetype_embeddings[archetype_construct])
@@ -180,18 +183,18 @@ class ArchetypeQuantifier():
 
                 # calculate the embedding for the 'test' sentence
                 archetype_test_embedding = torchmean(self.model.encode(
-                    archetype_test_sent,
-                    convert_to_tensor=True),
-                    axis=0).tolist()
+                                                     archetype_test_sent,
+                                                     convert_to_tensor=True),
+                                                     axis=0).tolist()
 
                 # we save these vectors for later so that we can calculate cronbach's alpha
                 sentence_vectors.append(archetype_test_embedding)
 
                 # calculate the average embedding for all of the 'rest' sentences
                 archetype_rest_embedding = torchmean(self.model.encode(
-                    archetype_rest_sents,
-                    convert_to_tensor=True),
-                    axis=0).tolist()
+                                                     archetype_rest_sents,
+                                                     convert_to_tensor=True),
+                                                     axis=0).tolist()
 
                 if self.centered_vec:
                     archetype_test_embedding = mean_center(archetype_test_embedding)
@@ -287,8 +290,14 @@ class ArchetypeQuantifier():
 
         return archetype_names
 
-    def batch_analyze_to_csv(self, texts: list, text_metadata: dict, csv_sent_output_location: str, csv_doc_output_location: str,
-                       append_to_existing_csv: bool = False, output_encoding: str = "utf-8-sig"):
+    def batch_analyze_to_csv(self, 
+                             texts: list,
+                             text_metadata: dict,
+                             csv_sent_output_location: str,
+                             csv_doc_output_location: str,
+                             append_to_existing_csv: bool = False,
+                             output_encoding: str = "utf-8-sig",
+                             doc_avgs_exclude_sents_with_WC_less_than: int = 0):
         """
 
         :param texts: a list of texts that you want to analyze
@@ -331,7 +340,8 @@ class ArchetypeQuantifier():
                 csvw_sent.writerows(self.generate_csv_output_sentence_level(
                     input_metadata=meta_output))
                 csvw_doc.writerow(self.generate_csv_output_document_level(
-                    input_metadata=meta_output))
+                    input_metadata=meta_output,
+                    doc_avgs_exclude_sents_with_WC_less_than=doc_avgs_exclude_sents_with_WC_less_than))
 
         return
 
@@ -417,12 +427,11 @@ class ArchetypeQuantifier():
                 for i in range(len(self.archetype_order.keys())):
                         sentence_result.append(result.archetype_scores[self.archetype_order[i]])
 
-
                 results.append(sentence_result)
 
         return results
 
-    def get_results_text_avgs(self, ) -> list:
+    def get_results_text_avgs(self, doc_avgs_exclude_sents_with_WC_less_than: int = 0) -> list:
         """
         Calculates the average of each archetype across all sentences in the text
         :return:
@@ -430,14 +439,21 @@ class ArchetypeQuantifier():
 
         sentence_results = self.get_results_per_sentence()
 
+
+        # retain sentences with a WC greater than our desired threshold
+        sentence_results_clean = [sent_result for sent_result in sentence_results if sent_result[0] >= doc_avgs_exclude_sents_with_WC_less_than]
+
+
         # only calculate the actual averages if we have more than zero sentences
-        if len(sentence_results) > 0:
-            sentence_results_as_np_array = np.array(sentence_results)
+        if len(sentence_results_clean) > 0:
+            sentence_results_as_np_array = np.array(sentence_results_clean)
             results_avg = np.average(sentence_results_as_np_array, axis=0).tolist()
         else:
-            results_avg = [] * len(self.get_list_of_archetypes())
+            results_avg = [None] * len(self.get_list_of_archetypes())
 
-        # this is getting the sum of the word count, which is why we're just doing the sum here
+        # this is getting the sum of the word count, which is why we're just doing the sum here.
+        # we include short sentences that may have been omitted from the archetype averages  in this sum because we
+        # want an accurate reflection of the overall text length.
         results_avg[0] = 0
         for res in sentence_results:
             results_avg[0] += res[0]
@@ -482,10 +498,13 @@ class ArchetypeQuantifier():
 
         return output_data
 
-    def generate_csv_output_document_level(self, input_metadata: list, raw_counts: bool = False) -> list:
+    def generate_csv_output_document_level(self, 
+                                           input_metadata: list,
+                                           raw_counts: bool = False,
+                                           doc_avgs_exclude_sents_with_WC_less_than: int = 0) -> list:
 
         output_data = input_metadata
         output_data.append(str(len(self.results)))
-        output_data.extend(self.get_results_text_avgs())
+        output_data.extend(self.get_results_text_avgs(doc_avgs_exclude_sents_with_WC_less_than))
 
         return output_data
