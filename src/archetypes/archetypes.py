@@ -430,12 +430,14 @@ class ArchetypeQuantifier():
 
         sentence_results = self.get_results_per_sentence()
 
+        # only calculate the actual averages if we have more than zero sentences
         if len(sentence_results) > 0:
             sentence_results_as_np_array = np.array(sentence_results)
             results_avg = np.average(sentence_results_as_np_array, axis=0).tolist()
         else:
             results_avg = [] * len(self.get_list_of_archetypes())
 
+        # this is getting the sum of the word count, which is why we're just doing the sum here
         results_avg[0] = 0
         for res in sentence_results:
             results_avg[0] += res[0]
