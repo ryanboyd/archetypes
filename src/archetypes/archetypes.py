@@ -422,7 +422,7 @@ class ArchetypeQuantifier():
 
         return results
 
-    def get_results_text_avgs(self, ) -> float:
+    def get_results_text_avgs(self, ) -> list:
         """
         Calculates the average of each archetype across all sentences in the text
         :return:
