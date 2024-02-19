@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 name = "archetyper"
 
-version = "1.0.2"
+version = "1.1.0"
 
 authors = [
   { name="Ryan L. Boyd", email="ryan@ryanboyd.io" },

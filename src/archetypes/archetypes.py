@@ -18,38 +18,25 @@ def make_safe_filename(s):
     return "".join(safe_char(c) for c in s).rstrip("_")
 
 def z_center(input_vector: list) -> list:
-
     list_mean = sum(input_vector) / len(input_vector)
     list_stdev = sum([((x - list_mean) ** 2) for x in input_vector]) / len(input_vector) ** 0.5
-
     z_list = [(x - list_mean / list_stdev) for x in input_vector]
-
     return z_list
 
 def mean_center(input_vector: list) -> list:
-
     list_mean = sum(input_vector) / len(input_vector)
-
     centered_list = [x - list_mean for x in input_vector]
-
     return centered_list
 
 def cronbach(input_vectors: list) -> float:
-
     k = len(input_vectors)
-
     if k < 2:
         return None
-
     item_variances = []
-
     for i in range(0, k):
         item_variances.append(variance(input_vectors[i]))
-
     total_variance = variance(np.sum(input_vectors, 0))
-
     cronbach_alpha = (k / (k - 1)) * ((total_variance - sum(item_variances)) / total_variance)
-
     return cronbach_alpha
 
 
@@ -65,7 +52,9 @@ class ArchetypeCollection():
         #self.archetype_detection_thresholds = {}
         return
 
-    def add_archetype(self, name: str, sentences: list) -> None:
+    def add_archetype(self,
+                      name: str,
+                      sentences: list) -> None:
         """
 
         :param name: The name of the archetype being added
@@ -85,7 +74,10 @@ class ArchetypeCollection():
 
         return
 
-    def add_archetypes_from_CSV(self, filepath: str, file_encoding:str ="utf-8-sig", file_has_headers: bool=True):
+    def add_archetypes_from_CSV(self,
+                                filepath: str,
+                                file_encoding:str ="utf-8-sig",
+                                file_has_headers: bool=True):
 
         archetype_dict = {}
         archetype_list = []
@@ -113,7 +105,10 @@ class ArchetypeCollection():
 
 class ArchetypeResult():
 
-    def __init__(self, sentence_text: str, sentence_embedding, WC: int) -> None:
+    def __init__(self,
+                 sentence_text: str,
+                 sentence_embedding,
+                 WC: int) -> None:
         self.WC = WC
         self.sentence_text = sentence_text
         self.sentence_embedding = sentence_embedding
@@ -128,8 +123,7 @@ class ArchetypeQuantifier():
 
     def __init__(self,
                  archetypes: ArchetypeCollection,
-                 model: str,
-                 mean_center_vectors: bool = True) -> None:
+                 model: str) -> None:
         """
         Initialize an instance of the ArchetypeQuantifier class
         :param archetypes: An instance of the Archetype_Collection class
@@ -139,7 +133,6 @@ class ArchetypeQuantifier():
         self.results = []
         self.archetypes = archetypes
         self.model = SentenceTransformer(model)
-        self.centered_vec = mean_center_vectors
 
         # take the archetype sentences and convert each one to an embedding.
         # then, we calculate the average embedding for each archetype construct.
@@ -153,8 +146,6 @@ class ArchetypeQuantifier():
                                                                        convert_to_tensor=True),
                                                                        axis=0).tolist()
 
-            if self.centered_vec:
-                self.archetype_embeddings[archetype_construct] = mean_center(self.archetype_embeddings[archetype_construct])
             self.archetype_order[order_count] = archetype_construct
             order_count += 1
 
@@ -162,7 +153,8 @@ class ArchetypeQuantifier():
 
         return
 
-    def evaluate_archetype_consistency(self, ) -> None:
+    def evaluate_archetype_consistency(self,
+                                       mean_center_vectors: bool = False) -> None:
         """
         Print output that shows something like the "internal consistency" of each archetype, based on the prototypical sentences
         :return:
@@ -196,7 +188,7 @@ class ArchetypeQuantifier():
                                                      convert_to_tensor=True),
                                                      axis=0).tolist()
 
-                if self.centered_vec:
+                if mean_center_vectors:
                     archetype_test_embedding = mean_center(archetype_test_embedding)
                     archetype_rest_embedding = mean_center(archetype_rest_embedding)
                     
@@ -209,7 +201,10 @@ class ArchetypeQuantifier():
                 print(f"\t{round(cos_sim, 5)}: {archetype_test_sent[0]}")
 
             print("\t--------------------")
-            print(f"\t{round(mean_cos_sim, 5)}: Average item-rest cos_sim")
+            if mean_center_vectors:
+                print(f"\t{round(mean_cos_sim, 5)}: Average item-rest correlation")
+            else:
+                print(f"\t{round(mean_cos_sim, 5)}: Average item-rest cosine similarity")
 
             cronbachs_alpha = cronbach(sentence_vectors)
             if cronbachs_alpha is None:
@@ -221,7 +216,68 @@ class ArchetypeQuantifier():
 
         return
 
-    def export_archetype_internal_correlations(self, output_folder: str) -> None:
+    def export_all_archetype_relationships(self,
+                                           output_file_location: str,
+                                           mean_center_vectors: bool = False) -> None:
+
+        print("Calculating all relationships within/across all archetypes...")
+
+        raw_vectors = []
+        vector_names = []
+
+        # start off by getting the vectors for all of the archetypes
+        for archetype_name in self.get_list_of_archetypes():
+            vector_names.append(archetype_name)
+            raw_vec = torchmean(self.model.encode(
+                                self.archetypes.archetype_sentences[archetype_name],
+                                convert_to_tensor=True),
+                                axis=0).tolist()
+            raw_vectors.append(raw_vec)
+
+
+
+        # now we do it for the individual sentences
+        for archetype_name in self.get_list_of_archetypes():
+            for archetype_sentence in self.archetypes.archetype_sentences[archetype_name]:
+                vector_names.append(f"{archetype_name}: {archetype_sentence}")
+                raw_vec = torchmean(self.model.encode(
+                                    [archetype_sentence],
+                                    convert_to_tensor=True),
+                                    axis=0).tolist()
+                raw_vectors.append(raw_vec)
+
+        if mean_center_vectors:
+            for i in range(0, len(raw_vectors)):
+                raw_vectors[i] = mean_center(raw_vectors[i])
+
+        corr_matrix = np.corrcoef(raw_vectors).tolist()
+
+        with open(output_file_location, 'w', encoding='utf-8-sig', newline='') as fout:
+            csvw = csv.writer(fout)
+
+            csv_header_row = [""]
+            csv_header_row.extend(vector_names)
+
+            csvw.writerow(csv_header_row)
+
+            for i in range(0, len(corr_matrix)):
+                output_row = [vector_names[i]]
+                output_row.extend(corr_matrix[i])
+                csvw.writerow(output_row)
+
+        print(f"All relationships exported to: {output_file_location}")
+        return
+
+
+    def export_archetype_internal_correlations(self,
+                                               output_folder: str,
+                                               mean_center_vectors: bool = False) -> None:
+        """
+
+        :param output_folder: Choose a folder to export separate CSVs of the correlations within archetypes
+        :param mean_center_vectors: Do you want to mean-center your vectors? If yes, results can be interpreted as correlations. If not, these should be interpreted as cosine similarities.
+        :return:
+        """
 
         if not os.path.exists(output_folder):
             os.makedirs(output_folder, exist_ok=True)
@@ -244,7 +300,7 @@ class ArchetypeQuantifier():
                     archetype_i_embedding = archetype_embeddings[i].tolist()
                     archetype_j_embedding = archetype_embeddings[j].tolist()
 
-                    if self.centered_vec:
+                    if mean_center_vectors:
                         archetype_i_embedding = mean_center(archetype_i_embedding)
                         archetype_j_embedding = mean_center(archetype_j_embedding)
 
@@ -276,8 +332,6 @@ class ArchetypeQuantifier():
         return
 
 
-
-
     def get_list_of_archetypes(self, ) -> list:
         """
         Return a list or the archetype names, in order
@@ -297,6 +351,7 @@ class ArchetypeQuantifier():
                              csv_doc_output_location: str,
                              append_to_existing_csv: bool = False,
                              output_encoding: str = "utf-8-sig",
+                             mean_center_vectors: bool = False,
                              doc_avgs_exclude_sents_with_WC_less_than: int = 0):
         """
 
@@ -306,6 +361,8 @@ class ArchetypeQuantifier():
         :param csv_doc_output_location: path where you want to save a CSV of your document-level output
         :param append_to_existing_csv: do you want to append to an existing CSV file?
         :param output_encoding: the file encoding that you want to use to write your CSV files
+        :param mean_center_vectors: do you want to mean-center your vectors during the analysis?
+        :param doc_avgs_exclude_sents_with_WC_less_than: when calculating document-level averages, sentences with fewer than N words will be excluded. Note that these exclusions will only be reflected in the document-level averages for each archetype, but not in other values (e.g., word count)
         :return:
         """
 
@@ -330,7 +387,7 @@ class ArchetypeQuantifier():
 
             for i in tqdm(range(len(texts))):
 
-                self.analyze(texts[i])
+                self.analyze(texts[i], mean_center_vectors=mean_center_vectors)
 
                 meta_output = []
 
@@ -345,10 +402,11 @@ class ArchetypeQuantifier():
 
         return
 
-    def analyze(self, text: str) -> None:
+    def analyze(self, text: str, mean_center_vectors: bool = False) -> None:
         """
         Takes the input text, segments into sentences, then analyzes each sentence for similarity to each archetype
-        :param text:
+        :param text: The text that you want to analyze
+        :param mean_center_vectors: Do you want to mean-center your vectors when calculating similarities?
         :return:
         """
 
@@ -391,11 +449,16 @@ class ArchetypeQuantifier():
                     # first, we keep a copy of the sentence embedding
                     archetype_result.sentence_embedding = sentence_embeddings[i]
 
-                    if self.centered_vec:
+                    cos_sim = None
+
+                    if mean_center_vectors:
                         archetype_result.sentence_embedding = mean_center(archetype_result.sentence_embedding)
 
-                    cos_sim = util.pytorch_cos_sim(archetype_embedding,
-                                                   archetype_result.sentence_embedding)[0]
+                        cos_sim = util.pytorch_cos_sim(mean_center(archetype_embedding),
+                                                       archetype_result.sentence_embedding)[0]
+                    else:
+                        cos_sim = util.pytorch_cos_sim(archetype_embedding,
+                                                       archetype_result.sentence_embedding)[0]
 
                     archetype_result.archetype_scores[archetype_construct] = float(cos_sim)
 
@@ -431,9 +494,11 @@ class ArchetypeQuantifier():
 
         return results
 
-    def get_results_text_avgs(self, doc_avgs_exclude_sents_with_WC_less_than: int = 0) -> list:
+    def get_results_text_avgs(self,
+                              doc_avgs_exclude_sents_with_WC_less_than: int = 0) -> list:
         """
         Calculates the average of each archetype across all sentences in the text
+        :param doc_avgs_exclude_sents_with_WC_less_than: when calculating document-level averages, sentences with fewer than N words will be excluded. Note that these exclusions will only be reflected in the document-level averages for each archetype, but not in other values (e.g., word count)
         :return:
         """
 
