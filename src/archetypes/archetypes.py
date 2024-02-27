@@ -269,7 +269,7 @@ class ArchetypeQuantifier():
         return
 
 
-    def export_archetype_internal_correlations(self,
+    def export_intra_archetype_correlations(self,
                                                output_folder: str,
                                                mean_center_vectors: bool = False) -> None:
         """
@@ -327,10 +327,37 @@ class ArchetypeQuantifier():
                 print('Error! Could not open file to write correlations.')
                 return
 
-            print(f"Successfully exported correlation matrix for: {archetype_name}")
+            print(f"Successfully exported intra-archetype cosine similarity matrix for: {archetype_name}")
 
         return
 
+    def export_inter_archetype_correlations(self, output_filename: str) -> None:
+        #get archetype names
+        archetype_names = self.archetypes.archetype_names
+        #matrix of cos sim
+        cos_sim_matrix = [[None] * len(archetype_names) for x in range(len(archetype_names))]
+        #fill in the diagonal with 1s
+        for i in range(0, len(archetype_names)):
+            cos_sim_matrix[i][i] = 1.0
+        #get the embeddings for each archetype
+        for archetype_construct, archetype_embedding in self.archetype_embeddings.items():
+            #get cos sim between each pair of archetypes
+            for other_archetype_construct, other_archetype_embedding in self.archetype_embeddings.items():
+                cos_sim = float(util.pytorch_cos_sim(archetype_embedding, other_archetype_embedding)[0])
+                cos_sim_matrix[archetype_names.index(archetype_construct)][archetype_names.index(other_archetype_construct)] = cos_sim
+        #write to csv
+        try:
+            with open(output_filename, 'w', encoding='utf-8-sig', newline='') as fout:
+                csvw = csv.writer(fout)
+                csvw.writerow(archetype_names)
+                for i in range(0, len(archetype_names)):
+                    output_row = [archetype_names[i]]
+                    output_row.extend(cos_sim_matrix[i])
+                    csvw.writerow(output_row)
+        except:
+            print('Error! Could not open file to write correlations.')
+            return
+        print(f"Successfully exported inter-archetype cosine similarity matrix for archetypes to: {output_filename}")
 
     def get_list_of_archetypes(self, ) -> list:
         """
