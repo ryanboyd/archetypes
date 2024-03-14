@@ -227,7 +227,7 @@ class ArchetypeQuantifier():
 
         # start off by getting the vectors for all of the archetypes
         for archetype_name in self.get_list_of_archetypes():
-            vector_names.append(archetype_name)
+            vector_names.append(f"Archetype: {archetype_name}")
             raw_vec = torchmean(self.model.encode(
                                 self.archetypes.archetype_sentences[archetype_name],
                                 convert_to_tensor=True),
@@ -239,7 +239,7 @@ class ArchetypeQuantifier():
         # now we do it for the individual sentences
         for archetype_name in self.get_list_of_archetypes():
             for archetype_sentence in self.archetypes.archetype_sentences[archetype_name]:
-                vector_names.append(f"{archetype_name}: {archetype_sentence}")
+                vector_names.append(f"Prototype ({archetype_name}): {archetype_sentence}")
                 raw_vec = torchmean(self.model.encode(
                                     [archetype_sentence],
                                     convert_to_tensor=True),
