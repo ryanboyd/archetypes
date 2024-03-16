@@ -34,16 +34,40 @@ I have provided an example notebook in this repo that walks through the basic pr
 
 # Citation
 
-This method is originally described in the following forthcoming paper:
+This method is originally described in [this paper](https://aclanthology.org/2024.clpsych-1.28/):
 ```
-@inproceedings{varadarajan_archetypes_2024,
-	address = {St. Julians, Malta},
-	title = {Archetypes and {Entropy}: {Theory}-{Driven} {Extraction} of {Evidence} for {Suicide} {Risk}},
-	booktitle = {Proceedings of the {Tenth} {Workshop} on {Computational} {Linguistics} and {Clinical} {Psychology}},
-	publisher = {Association for Computational Linguistics},
-	author = {Varadarajan, Vasudha and Lahnala, Allison and Ganesan, Adithya V. and Dey, Gourab and Mangalik, Siddharth and Bucur, Ana-Maria and Soni, Nikita and Rao, Rajath and Lanning, Kevin and Vallejo, Isabella and Flek, Lucie and Schwartz, H. Andrew and Welch, Charles and Boyd, Ryan L.},
-	year = {2024},
+@inproceedings{varadarajan-etal-2024-archetypes,
+    title = "Archetypes and Entropy: Theory-Driven Extraction of Evidence for Suicide Risk",
+    author = "Varadarajan, Vasudha  and
+      Lahnala, Allison  and
+      Ganesan, Adithya V. and
+      Dey, Gourab  and
+      Mangalik, Siddharth  and
+      Bucur, Ana-Maria  and
+      Soni, Nikita  and
+      Rao, Rajath  and
+      Lanning, Kevin  and
+      Vallejo, Isabella  and
+      Flek, Lucie  and
+      Schwartz, H. Andrew  and
+      Welch, Charles  and
+      Boyd, Ryan L.",
+    editor = "Yates, Andrew  and
+      Desmet, Bart  and
+      Prud{'}hommeaux, Emily  and
+      Zirikly, Ayah  and
+      Bedrick, Steven  and
+      MacAvaney, Sean  and
+      Bar, Kfir  and
+      Ireland, Molly  and
+      Ophir, Yaakov",
+    booktitle = "Proceedings of the 9th Workshop on Computational Linguistics and Clinical Psychology (CLPsych 2024)",
+    month = mar,
+    year = "2024",
+    address = "St. Julians, Malta",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.clpsych-1.28",
+    pages = "278--291",
+    abstract = "Research on psychological risk factors for suicide has developed for decades. However, combining explainable theory with modern data-driven language model approaches is non-trivial. In this study, we propose and evaluate methods for identifying language patterns aligned with theories of suicide risk by combining theory-driven suicidal archetypes with language model-based and relative entropy-based approaches. Archetypes are based on prototypical statements that evince risk of suicidality while relative entropy considers the ratio of how unusual both a risk-familiar and unfamiliar model find the statements. While both approaches independently performed similarly, we find that combining the two significantly improved the performance in the shared task evaluations, yielding our combined system submission with a BERTScore Recall of 0.906. Consistent with the literature, we find that titles are highly informative as suicide risk evidence, despite the brevity. We conclude that a combination of theory- and data-driven methods are needed in the mental health space and can outperform more modern prompt-based methods.",
 }
 ```
-
-The citation above will be updated once the paper is actually published 😊
