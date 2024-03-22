@@ -2,6 +2,7 @@
 import csv
 import os.path
 import numpy as np
+from math import log
 from tqdm import tqdm
 from statistics import variance
 from torch import mean as torchmean
@@ -379,6 +380,7 @@ class ArchetypeQuantifier():
                              append_to_existing_csv: bool = False,
                              output_encoding: str = "utf-8-sig",
                              mean_center_vectors: bool = False,
+                             fisher_z_transform: bool = False,
                              doc_avgs_exclude_sents_with_WC_less_than: int = 0):
         """
 
@@ -389,6 +391,7 @@ class ArchetypeQuantifier():
         :param append_to_existing_csv: do you want to append to an existing CSV file?
         :param output_encoding: the file encoding that you want to use to write your CSV files
         :param mean_center_vectors: do you want to mean-center your vectors during the analysis?
+        :param fisher_z_transform: Do you want to Fisher Z-transform the cosine similarities to help ensure a more normal distribution of measures?
         :param doc_avgs_exclude_sents_with_WC_less_than: when calculating document-level averages, sentences with fewer than N words will be excluded. Note that these exclusions will only be reflected in the document-level averages for each archetype, but not in other values (e.g., word count)
         :return:
         """
@@ -414,7 +417,9 @@ class ArchetypeQuantifier():
 
             for i in tqdm(range(len(texts))):
 
-                self.analyze(texts[i], mean_center_vectors=mean_center_vectors)
+                self.analyze(texts[i],
+                             mean_center_vectors=mean_center_vectors,
+                             fisher_z_transform=fisher_z_transform)
 
                 meta_output = []
 
@@ -429,11 +434,14 @@ class ArchetypeQuantifier():
 
         return
 
-    def analyze(self, text: str, mean_center_vectors: bool = False) -> None:
+    def analyze(self, text: str,
+                mean_center_vectors: bool = False,
+                fisher_z_transform: bool = False) -> None:
         """
         Takes the input text, segments into sentences, then analyzes each sentence for similarity to each archetype
         :param text: The text that you want to analyze
         :param mean_center_vectors: Do you want to mean-center your vectors when calculating similarities?
+        :param fisher_z_transform: Do you want to Fisher Z-transform the cosine similarities to help ensure a more normal distribution of measures?
         :return:
         """
 
@@ -481,13 +489,25 @@ class ArchetypeQuantifier():
                     if mean_center_vectors:
                         archetype_result.sentence_embedding = mean_center(archetype_result.sentence_embedding)
 
-                        cos_sim = util.pytorch_cos_sim(mean_center(archetype_embedding),
-                                                       archetype_result.sentence_embedding)[0]
+                        cos_sim = float(util.pytorch_cos_sim(mean_center(archetype_embedding),
+                                                       archetype_result.sentence_embedding)[0])
                     else:
-                        cos_sim = util.pytorch_cos_sim(archetype_embedding,
-                                                       archetype_result.sentence_embedding)[0]
+                        cos_sim = float(util.pytorch_cos_sim(archetype_embedding,
+                                                       archetype_result.sentence_embedding)[0])
 
-                    archetype_result.archetype_scores[archetype_construct] = float(cos_sim)
+                    if not fisher_z_transform:
+                        archetype_result.archetype_scores[archetype_construct] = cos_sim
+                    else:
+                        # if we have a value that is equal to (negative) one,
+                        # then we just pretend that the correlation is .9999999999999999, which would give us a
+                        # Fisher Z value of (-)18.714973875118524
+                        if cos_sim >= 1.0:
+                            archetype_result.archetype_scores[archetype_construct] = 18.714973875118524
+                        elif cos_sim <= -1.0:
+                            archetype_result.archetype_scores[archetype_construct] = -18.714973875118524
+                        else:
+                            archetype_result.archetype_scores[archetype_construct] = .5 * log(
+                                (1 + cos_sim) / (1 - cos_sim))
 
             archetype_result.error_encountered = error_encountered
             results.append(archetype_result)
