@@ -50,7 +50,6 @@ class ArchetypeCollection():
         """
         self.archetype_names = []
         self.archetype_sentences = {}
-        #self.archetype_detection_thresholds = {}
         return
 
     def add_archetype(self,
@@ -60,7 +59,6 @@ class ArchetypeCollection():
 
         :param name: The name of the archetype being added
         :param sentences: A list of sentences that are used to represent the archetype
-        :param detection_threshold: The cosine similarity value that is used to determine whether a sentence does, versus does not, contain an instantiation of an archetype
         :return:
         """
         # wipe out the existing entries if we already have an archetype by this name
@@ -217,9 +215,68 @@ class ArchetypeQuantifier():
 
         return
 
+    def export_all_archetype_vectors(self,
+                                     output_file_location: str,
+                                     mean_center_vectors: bool = False) -> None:
+
+        """
+        This function exports the raw vectors for your archetypes/prototypes in transposed format.
+        :param output_file_location: The name of the file where you would like your exported results to be written.
+        :param mean_center_vectors: Do you want to mean-center your vectors for these calculations?
+        :return:
+        """
+
+        raw_vectors = []
+        vector_names = []
+
+        # start off by getting the vectors for all of the archetypes
+        for archetype_name in self.get_list_of_archetypes():
+            vector_names.append(f"Archetype: {archetype_name}")
+            raw_vec = torchmean(self.model.encode(
+                self.archetypes.archetype_sentences[archetype_name],
+                convert_to_tensor=True),
+                axis=0).tolist()
+            raw_vectors.append(raw_vec)
+
+        # now we do it for the individual sentences
+        for archetype_name in self.get_list_of_archetypes():
+            for archetype_sentence in self.archetypes.archetype_sentences[archetype_name]:
+                vector_names.append(f"Prototype ({archetype_name}): {archetype_sentence}")
+                raw_vec = torchmean(self.model.encode(
+                    [archetype_sentence],
+                    convert_to_tensor=True),
+                    axis=0).tolist()
+                raw_vectors.append(raw_vec)
+
+        if mean_center_vectors:
+            for i in range(0, len(raw_vectors)):
+                raw_vectors[i] = mean_center(raw_vectors[i])
+
+        raw_vectors_trasposed = list(map(list, zip(*raw_vectors)))
+
+        with open(output_file_location, 'w', encoding='utf-8-sig', newline='') as fout:
+            csvw = csv.writer(fout)
+            csvw.writerow(vector_names)
+
+            for row in raw_vectors_trasposed:
+                csvw.writerow(row)
+
+        print("All archetype vectors have been exported.")
+
+        return
+
+
     def export_all_archetype_relationships(self,
                                            output_file_location: str,
                                            mean_center_vectors: bool = False) -> None:
+        """
+        This function exports cosine similarities (or correlations, if you mean center the vectors) between all aspects
+        of your archetypes. This is a way to view the relationships between the semantics of not only the archetypes,
+        but all of the prototype sentences as well.
+        :param output_file_location: The name of the file where you would like your exported results to be written.
+        :param mean_center_vectors: Do you want to mean-center your vectors for these calculations?
+        :return:
+        """
 
         print("Calculating all relationships within/across all archetypes...")
 
