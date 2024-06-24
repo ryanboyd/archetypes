@@ -429,7 +429,7 @@ class ArchetypeQuantifier():
 
         return archetype_names
 
-    def batch_analyze_to_csv(self, 
+    def batch_analyze_to_csv(self,
                              texts: list,
                              text_metadata: dict,
                              csv_sent_output_location: str,
@@ -438,7 +438,8 @@ class ArchetypeQuantifier():
                              output_encoding: str = "utf-8-sig",
                              mean_center_vectors: bool = False,
                              fisher_z_transform: bool = False,
-                             doc_avgs_exclude_sents_with_WC_less_than: int = 0):
+                             doc_avgs_exclude_sents_with_WC_less_than: int = 0,
+                             doc_level_aggregation_type: str = "mean"):
         """
 
         :param texts: a list of texts that you want to analyze
@@ -450,6 +451,7 @@ class ArchetypeQuantifier():
         :param mean_center_vectors: do you want to mean-center your vectors during the analysis?
         :param fisher_z_transform: Do you want to Fisher Z-transform the cosine similarities to help ensure a more normal distribution of measures?
         :param doc_avgs_exclude_sents_with_WC_less_than: when calculating document-level averages, sentences with fewer than N words will be excluded. Note that these exclusions will only be reflected in the document-level averages for each archetype, but not in other values (e.g., word count)
+        :param doc_level_aggregation_type: when aggregating scores at the document level, do you want document-level "mean" or document-level "max"?
         :return:
         """
 
@@ -487,7 +489,8 @@ class ArchetypeQuantifier():
                     input_metadata=meta_output))
                 csvw_doc.writerow(self.generate_csv_output_document_level(
                     input_metadata=meta_output,
-                    doc_avgs_exclude_sents_with_WC_less_than=doc_avgs_exclude_sents_with_WC_less_than))
+                    doc_avgs_exclude_sents_with_WC_less_than=doc_avgs_exclude_sents_with_WC_less_than,
+                    aggregation_type=doc_level_aggregation_type))
 
         return
 
@@ -599,7 +602,8 @@ class ArchetypeQuantifier():
         return results
 
     def get_results_text_avgs(self,
-                              doc_avgs_exclude_sents_with_WC_less_than: int = 0) -> list:
+                              doc_avgs_exclude_sents_with_WC_less_than: int = 0,
+                              aggregation_type: str = "mean") -> list:
         """
         Calculates the average of each archetype across all sentences in the text
         :param doc_avgs_exclude_sents_with_WC_less_than: when calculating document-level averages, sentences with fewer than N words will be excluded. Note that these exclusions will only be reflected in the document-level averages for each archetype, but not in other values (e.g., word count)
@@ -616,7 +620,11 @@ class ArchetypeQuantifier():
         # only calculate the actual averages if we have more than zero sentences
         if len(sentence_results_clean) > 0:
             sentence_results_as_np_array = np.array(sentence_results_clean)
-            results_avg = np.average(sentence_results_as_np_array, axis=0).tolist()
+            if aggregation_type == "max":
+                results_avg = np.max(sentence_results_as_np_array, axis=0).tolist()
+            else:
+                results_avg = np.average(sentence_results_as_np_array, axis=0).tolist()
+
         else:
             results_avg = [None] * len(self.get_list_of_archetypes())
 
@@ -670,10 +678,18 @@ class ArchetypeQuantifier():
     def generate_csv_output_document_level(self, 
                                            input_metadata: list,
                                            raw_counts: bool = False,
-                                           doc_avgs_exclude_sents_with_WC_less_than: int = 0) -> list:
+                                           doc_avgs_exclude_sents_with_WC_less_than: int = 0,
+                                           aggregation_type: str = "mean") -> list:
 
         output_data = input_metadata
         output_data.append(str(len(self.results)))
-        output_data.extend(self.get_results_text_avgs(doc_avgs_exclude_sents_with_WC_less_than))
+
+        if aggregation_type == "max":
+            output_data.extend(self.get_results_text_avgs(doc_avgs_exclude_sents_with_WC_less_than,
+                                                          aggregation_type=aggregation_type))
+        else:
+            output_data.extend(self.get_results_text_avgs(doc_avgs_exclude_sents_with_WC_less_than,
+                               aggregation_type="mean"))
+
 
         return output_data
