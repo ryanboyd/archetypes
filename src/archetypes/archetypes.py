@@ -470,9 +470,10 @@ class ArchetypeQuantifier():
 
             if append_to_existing_csv is False:
                 csvw_sent.writerow(self.generate_csv_header_sentence_level(
-                    metadata_headers=meta_headers))
+                    metadata_headers=meta_headers,))
                 csvw_doc.writerow(self.generate_csv_header_document_level(
-                    metadata_headers=meta_headers))
+                    metadata_headers=meta_headers,
+                    aggregation_type=doc_level_aggregation_type))
 
             for i in tqdm(range(len(texts))):
 
@@ -638,7 +639,8 @@ class ArchetypeQuantifier():
         return results_avg
 
 
-    def generate_csv_header_sentence_level(self, metadata_headers: list):
+    def generate_csv_header_sentence_level(self,
+                                           metadata_headers: list):
         """
         Helper function to generate a CSV header
         :param metadata_headers: The other headers that will be prepended to your list of archetypes
@@ -649,10 +651,15 @@ class ArchetypeQuantifier():
         mh.extend(self.get_list_of_archetypes())
         return mh
 
-    def generate_csv_header_document_level(self, metadata_headers: list):
+    def generate_csv_header_document_level(self,
+                                           metadata_headers: list,
+                                           aggregation_type: str = "mean"):
 
         header_data_cos_sim = self.get_list_of_archetypes()
-        header_data_cos_sim = [x + "_cossim_avg" for x in header_data_cos_sim]
+        if aggregation_type == "max":
+            header_data_cos_sim = [x + "_cossim_max" for x in header_data_cos_sim]
+        else:
+            header_data_cos_sim = [x + "_cossim_avg" for x in header_data_cos_sim]
 
         mh = metadata_headers.copy()
         mh.extend(["NumSentences", "WC"])
