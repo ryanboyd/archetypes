@@ -122,16 +122,17 @@ class ArchetypeQuantifier():
 
     def __init__(self,
                  archetypes: ArchetypeCollection,
-                 model: str) -> None:
+                 model: str,
+                 hf_token: str = None) -> None:
         """
         Initialize an instance of the ArchetypeQuantifier class
         :param archetypes: An instance of the Archetype_Collection class
         :param model: The name of the sentence-transformers model that you want to use to quantify archetypes
-        :param mean_center_vectors: Do you want to z-score the vectors prior to calculating cosine similarity? Probably leave this as True unless you have good reason.
+        :param hf_token: Your huggingface token, if necessary.
         """
         self.results = []
         self.archetypes = archetypes
-        self.model = SentenceTransformer(model)
+        self.model = SentenceTransformer(model, use_auth_token=hf_token)
 
         # take the archetype sentences and convert each one to an embedding.
         # then, we calculate the average embedding for each archetype construct.
@@ -700,3 +701,37 @@ class ArchetypeQuantifier():
 
 
         return output_data
+
+if __name__ == "__main__":
+    
+    # a quick test
+
+    from pprint import pprint
+
+    model_name = 'dmlls/all-mpnet-base-v2-negation'
+    archetypes = ArchetypeCollection()
+
+    archetypes.add_archetype(name="Positive Archetype",
+                             sentences=["I feel like I have a lot of control over my life."])
+
+    archetypes.add_archetype(name="Negative Archetype",
+                             sentences=["I don't feel like I have a lot of control over my life."])
+
+    archetype_quantifier = ArchetypeQuantifier(archetypes=archetypes,
+                                               model=model_name)
+
+    example_text = "Sometimes, I just feel like I don't know if anything that I do has any effect."
+
+    archetype_quantifier.analyze(example_text,
+                                 mean_center_vectors=True,
+                                 fisher_z_transform=False)
+
+    results = archetype_quantifier.results
+
+    for result in results:
+        print(f"Sentence Text: {result.sentence_text}")
+        print(f"Word Count: {result.WC}")
+        print("Archetype scores:")
+        pprint(result.archetype_scores)
+        print("\n")
+
