@@ -9,11 +9,12 @@ build-backend = "setuptools.build_meta"
 
 name = "archetyper"
 
-version = "1.1.7"
+version = "1.2.0"
 
 authors = [
   { name="Ryan L. Boyd", email="ryan@ryanboyd.io" },
   { name="Vasudha Varadarajan", email="vvaradarajan@cs.stonybrook.edu" },
+  { name="Sid Mangalik", email="smangalik@cs.stonybrook.edu" },
 ]
 
 description = "Create and quantify 'archetypes' of your constructs. A dictionary-like method run amok!"
