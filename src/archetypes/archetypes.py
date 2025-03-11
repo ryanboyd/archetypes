@@ -201,7 +201,8 @@ class ArchetypeQuantifier():
                 
                 archetype_test_sent = [archetype_sentence]
                 archetype_weight = archetype_weights[i]
-                archetype_rest_sents = [x[i] for i, x in enumerate(self.archetypes.archetype_sentences[archetype_name]) if i != i]
+                archetype_rest_sents = [x for x in self.archetypes.archetype_sentences[archetype_name] if
+                                        x != archetype_test_sent]
 
                 # calculate the embedding for the 'test' sentence
                 archetype_test_embedding = torchmean(self.model.encode(
