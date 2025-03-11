@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import csv
+import torch
 import os.path
 import numpy as np
 from math import log
@@ -8,7 +9,24 @@ from statistics import variance
 from torch import mean as torchmean
 from sentence_transformers import SentenceTransformer, util
 from nltk import sent_tokenize
+from pprint import pprint
 
+def weighted_mean(input: torch.tensor, weight: list=[]) -> torch.tensor:
+    '''
+    Calculate the weighted mean of a stack of tensors
+    :param input: a stack of tensors to average
+    :param weight: a list of weights
+    :return: a tensor of the weighted mean
+    '''
+    # Default weights to 1.0 if not provided
+    if not weight or len(input) != len(weight):
+        weight = [1.0] * len(input)
+    input_tensor = input.clone().detach().to('cpu')
+    weight_tensor = torch.tensor(weight).to('cpu')
+    w_sum = torch.sum(input_tensor * weight_tensor.unsqueeze(-1), dim=0)
+    w_mean = w_sum / sum(weight)
+    return w_mean
+        
 
 def make_safe_filename(s):
     def safe_char(c):
@@ -50,11 +68,13 @@ class ArchetypeCollection():
         """
         self.archetype_names = []
         self.archetype_sentences = {}
+        self.archetype_weights = {}
         return
 
     def add_archetype(self,
                       name: str,
-                      sentences: list) -> None:
+                      sentences: list,
+                      weights: list = []):
         """
 
         :param name: The name of the archetype being added
@@ -65,41 +85,49 @@ class ArchetypeCollection():
         if name in self.archetype_names:
             self.archetype_names.remove(name)
             self.archetype_sentences.pop(name)
+            self.archetype_weights.pop(name)
 
         self.archetype_names.append(name)
         self.archetype_sentences[name] = sentences
+        self.archetype_weights[name] = weights
 
         print(f"Archetype added: {name}")
-
-        return
 
     def add_archetypes_from_CSV(self,
                                 filepath: str,
                                 file_encoding:str ="utf-8-sig",
                                 file_has_headers: bool=True):
 
-        archetype_dict = {}
+        archetype_sentence_dict = {}
+        archetype_weights_dict = {}
         archetype_list = []
 
         with open(filepath, 'r', encoding=file_encoding) as fin:
             csvr = csv.reader(fin)
             if file_has_headers:
-                header = csvr.__next__()
+                _ = csvr.__next__()
 
             for row in csvr:
 
                 archetype_name = row[0].strip()
                 prototype_sentence = row[1].strip()
-                if archetype_name not in archetype_dict:
-                    archetype_dict[archetype_name] = []
+                if len(row) > 2:
+                    archetype_weight = float(row[2])
+                else:
+                    archetype_weight = 1.0
+                    
+                # New archetype
+                if archetype_name not in archetype_sentence_dict.keys(): 
+                    archetype_sentence_dict[archetype_name] = []
+                    archetype_weights_dict[archetype_name] = []
                     archetype_list.append(archetype_name)
 
-                archetype_dict[archetype_name].append(prototype_sentence)
+                # Store the prototypical sentences and weights
+                archetype_sentence_dict[archetype_name].append(prototype_sentence)
+                archetype_weights_dict[archetype_name].append(archetype_weight)
 
         for archetype_name in archetype_list:
-            self.add_archetype(name=archetype_name, sentences=archetype_dict[archetype_name])
-
-        return
+            self.add_archetype(name=archetype_name, sentences=archetype_sentence_dict[archetype_name], weights=archetype_weights_dict[archetype_name])
 
 
 class ArchetypeResult():
@@ -108,14 +136,12 @@ class ArchetypeResult():
                  sentence_text: str,
                  sentence_embedding,
                  WC: int) -> None:
+        
         self.WC = WC
         self.sentence_text = sentence_text
         self.sentence_embedding = sentence_embedding
         self.error_encountered = False
         self.archetype_scores = {}
-
-        return
-
 
 # this is the main machine that will do the actual scoring of the texts
 class ArchetypeQuantifier():
@@ -140,18 +166,17 @@ class ArchetypeQuantifier():
         self.archetype_order = {}
 
         order_count = 0
-        for archetype_construct in self.archetypes.archetype_names:
-            self.archetype_embeddings[archetype_construct] = torchmean(input=self.model.encode(
-                                                                       sentences=self.archetypes.archetype_sentences[archetype_construct],
-                                                                       convert_to_tensor=True),
-                                                                       axis=0).tolist()
+        for archetype_name in self.archetypes.archetype_names:
+            input = self.model.encode(
+                sentences=self.archetypes.archetype_sentences[archetype_name],
+                convert_to_tensor=True
+            )
+            weight = self.archetypes.archetype_weights.get(archetype_name,[1.0]*len(self.archetypes.archetype_sentences[archetype_name]))
+            #self.archetype_embeddings[archetype_name] = torchmean(input=input,axis=0).tolist()
+            self.archetype_embeddings[archetype_name] = weighted_mean(input=input, weight=weight).tolist()
 
-            self.archetype_order[order_count] = archetype_construct
+            self.archetype_order[order_count] = archetype_name
             order_count += 1
-
-        print("ArchetypeQuantifier has been successfully instantiated.")
-
-        return
 
     def evaluate_archetype_consistency(self,
                                        mean_center_vectors: bool = False) -> None:
@@ -165,13 +190,18 @@ class ArchetypeQuantifier():
             print(f"Evaluating {archetype_name}...")
 
             mean_cos_sim = 0.0
+            num_sentences = len(self.archetypes.archetype_sentences[archetype_name])
+            archetype_weights = self.archetypes.archetype_weights.get(archetype_name,[1.0]*num_sentences)
+            sum_weights = sum(archetype_weights)
+            
 
             sentence_vectors = []
 
-            for i in range(len(self.archetypes.archetype_sentences[archetype_name])):
-                archetype_test_sent = [self.archetypes.archetype_sentences[archetype_name][i]]
-                archetype_rest_sents = [x for x in self.archetypes.archetype_sentences[archetype_name] if
-                                        x != archetype_test_sent]
+            for i, archetype_sentence in enumerate(self.archetypes.archetype_sentences[archetype_name]):
+                
+                archetype_test_sent = [archetype_sentence]
+                archetype_weight = archetype_weights[i]
+                archetype_rest_sents = [x[i] for i, x in enumerate(self.archetypes.archetype_sentences[archetype_name]) if i != i]
 
                 # calculate the embedding for the 'test' sentence
                 archetype_test_embedding = torchmean(self.model.encode(
@@ -195,10 +225,12 @@ class ArchetypeQuantifier():
 
                 cos_sim = float(util.pytorch_cos_sim(archetype_test_embedding,
                                                      archetype_rest_embedding)[0])
+                
+                weighted_cos_sim = cos_sim * archetype_weight
 
-                mean_cos_sim += cos_sim / len(self.archetypes.archetype_sentences[archetype_name])
+                mean_cos_sim += weighted_cos_sim / sum_weights
 
-                print(f"\t{round(cos_sim, 5)}: {archetype_test_sent[0]}")
+                print(f"\t{round(weighted_cos_sim, 5)}: {archetype_test_sent[0]}")
 
             print("\t--------------------")
             if mean_center_vectors:
@@ -208,13 +240,10 @@ class ArchetypeQuantifier():
 
             cronbachs_alpha = cronbach(sentence_vectors)
             if cronbachs_alpha is None:
-                print(f"\tCannot calculate Cronbach's alpha where the number of sentences < 2")
+                print("\tCannot calculate Cronbach's alpha where the number of sentences < 2")
             else:
                 print(f"\t{round(cronbach(sentence_vectors), 5)}: Cronbach's alpha\n\n")
 
-
-
-        return
 
     def export_all_archetype_vectors(self,
                                      output_file_location: str,
@@ -232,11 +261,13 @@ class ArchetypeQuantifier():
 
         # start off by getting the vectors for all of the archetypes
         for archetype_name in self.get_list_of_archetypes():
+            archetype_weights = self.archetypes.archetype_weights.get(archetype_name,[])
             vector_names.append(f"Archetype: {archetype_name}")
-            raw_vec = torchmean(self.model.encode(
-                self.archetypes.archetype_sentences[archetype_name],
-                convert_to_tensor=True),
-                axis=0).tolist()
+            raw_vec = weighted_mean(
+                input = self.model.encode(
+                    self.archetypes.archetype_sentences[archetype_name],
+                    convert_to_tensor=True),
+                weight=archetype_weights).tolist()
             raw_vectors.append(raw_vec)
 
         # now we do it for the individual sentences
@@ -264,8 +295,6 @@ class ArchetypeQuantifier():
 
         print("All archetype vectors have been exported.")
 
-        return
-
 
     def export_all_archetype_relationships(self,
                                            output_file_location: str,
@@ -286,13 +315,14 @@ class ArchetypeQuantifier():
 
         # start off by getting the vectors for all of the archetypes
         for archetype_name in self.get_list_of_archetypes():
+            archetype_weights = self.archetypes.archetype_weights.get(archetype_name,[])
             vector_names.append(f"Archetype: {archetype_name}")
-            raw_vec = torchmean(self.model.encode(
-                                self.archetypes.archetype_sentences[archetype_name],
-                                convert_to_tensor=True),
-                                axis=0).tolist()
+            raw_vec = weighted_mean(
+                input = self.model.encode(
+                    self.archetypes.archetype_sentences[archetype_name],
+                    convert_to_tensor=True),
+                weight=archetype_weights).tolist()
             raw_vectors.append(raw_vec)
-
 
 
         # now we do it for the individual sentences
@@ -325,7 +355,6 @@ class ArchetypeQuantifier():
                 csvw.writerow(output_row)
 
         print(f"All relationships exported to: {output_file_location}")
-        return
 
 
     def export_intra_archetype_correlations(self,
@@ -382,8 +411,8 @@ class ArchetypeQuantifier():
                         output_row = [self.archetypes.archetype_sentences[archetype_name][i]]
                         output_row.extend(corr_matrix[i])
                         csvw.writerow(output_row)
-            except:
-                print('Error! Could not open file to write correlations.')
+            except Exception as e:
+                print(e, '\nError! Could not open file to write correlations.')
                 return
 
             print(f"Successfully exported intra-archetype cosine similarity matrix for: {archetype_name}")
@@ -413,8 +442,8 @@ class ArchetypeQuantifier():
                     output_row = [archetype_names[i]]
                     output_row.extend(cos_sim_matrix[i])
                     csvw.writerow(output_row)
-        except:
-            print('Error! Could not open file to write correlations.')
+        except Exception as e:
+            print(e,'\nError! Could not open file to write correlations.')
             return
         print(f"Successfully exported inter-archetype cosine similarity matrix for archetypes to: {output_filename}")
 
@@ -427,8 +456,6 @@ class ArchetypeQuantifier():
 
         for i in range(len(self.archetypes.archetype_names)):
             archetype_names.append(self.archetype_order[i])
-
-        return archetype_names
 
     def batch_analyze_to_csv(self,
                              texts: list,
@@ -494,8 +521,6 @@ class ArchetypeQuantifier():
                     doc_avgs_exclude_sents_with_WC_less_than=doc_avgs_exclude_sents_with_WC_less_than,
                     aggregation_type=doc_level_aggregation_type))
 
-        return
-
     def analyze(self, text: str,
                 mean_center_vectors: bool = False,
                 fisher_z_transform: bool = False) -> None:
@@ -520,8 +545,8 @@ class ArchetypeQuantifier():
         try:
             # attempt to convert input sentences to embeddings
             sentence_embeddings = self.model.encode(sentences, convert_to_tensor=True).tolist()
-        except:
-            print("Error was encountered when trying to embed sentences.")
+        except Exception as e:
+            print(e, "\nError was encountered when trying to embed sentences.")
             error_encountered = True
 
         # calculate similarity between each sentence and each archetype construct
@@ -600,8 +625,6 @@ class ArchetypeQuantifier():
                         sentence_result.append(result.archetype_scores[self.archetype_order[i]])
 
                 results.append(sentence_result)
-
-        return results
 
     def get_results_text_avgs(self,
                               doc_avgs_exclude_sents_with_WC_less_than: int = 0,
@@ -703,16 +726,16 @@ class ArchetypeQuantifier():
         return output_data
 
 if __name__ == "__main__":
-    
-    # a quick test
-
-    from pprint import pprint
+    '''
+    Example usage of the ArchetypeCollection and ArchetypeQuantifier classes
+    '''
 
     model_name = 'dmlls/all-mpnet-base-v2-negation'
     archetypes = ArchetypeCollection()
 
     archetypes.add_archetype(name="Positive Archetype",
-                             sentences=["I feel like I have a lot of control over my life."])
+                             sentences=["I feel like I have a lot of control over my life."],
+                             weights=[1.0])
 
     archetypes.add_archetype(name="Negative Archetype",
                              sentences=["I don't feel like I have a lot of control over my life."])
@@ -720,18 +743,24 @@ if __name__ == "__main__":
     archetype_quantifier = ArchetypeQuantifier(archetypes=archetypes,
                                                model=model_name)
 
-    example_text = "Sometimes, I just feel like I don't know if anything that I do has any effect."
+    example_texts = ["Sometimes, I just feel like I don't know if anything that I do has any effect.",
+                     "I think I am the master of my own destiny.",
+                     "I feel like I am just a leaf in the wind, blowing wherever the breeze takes me."]
+    
+    for example_text in example_texts:
+        
+        print(f"\n-> Analyzing text: {example_text}")
 
-    archetype_quantifier.analyze(example_text,
-                                 mean_center_vectors=True,
-                                 fisher_z_transform=False)
+        print("Instantiating ArchetypeQuantifier.")
+        archetype_quantifier.analyze(example_text,
+                                    mean_center_vectors=True,
+                                    fisher_z_transform=False)
 
-    results = archetype_quantifier.results
+        results = archetype_quantifier.results
 
-    for result in results:
-        print(f"Sentence Text: {result.sentence_text}")
-        print(f"Word Count: {result.WC}")
-        print("Archetype scores:")
-        pprint(result.archetype_scores)
-        print("\n")
-
+        for result in results:
+            print(f"Sentence Text: {result.sentence_text}")
+            print(f"Word Count: {result.WC}")
+            print("Archetype scores:")
+            pprint(result.archetype_scores)
+            print("\n")
