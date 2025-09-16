@@ -458,6 +458,8 @@ class ArchetypeQuantifier():
         for i in range(len(self.archetypes.archetype_names)):
             archetype_names.append(self.archetype_order[i])
 
+        return archetype_names
+
     def batch_analyze_to_csv(self,
                              texts: list,
                              text_metadata: dict,
