@@ -629,6 +629,8 @@ class ArchetypeQuantifier():
 
                 results.append(sentence_result)
 
+        return results
+
     def get_results_text_avgs(self,
                               doc_avgs_exclude_sents_with_WC_less_than: int = 0,
                               aggregation_type: str = "mean") -> list:
